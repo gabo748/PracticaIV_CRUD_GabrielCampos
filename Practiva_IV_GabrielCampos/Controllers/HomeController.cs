@@ -23,18 +23,30 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public IActionResult Empleado_Detalle()
+    public IActionResult Empleado_Detalle(int? idEmpleado)
     {
-        EmpleadoVM oEmpleadoVM = new EmpleadoVM()
-        {
-            oEmpleado = new Empleado(),
-            oListaCargo = _DBContext.Cargos.Select(cargo => new SelectListItem()
-            {
-                Text = cargo.Descripcion,
-                Value = cargo.IdCargo.ToString()
-            }).ToList()
+        EmpleadoVM oEmpleadoVM = new EmpleadoVM();
 
-        };
+        if (idEmpleado.HasValue && idEmpleado.Value > 0)
+        {
+            // Editing an existing employee
+            var empleado = _DBContext.Empleados.Find(idEmpleado.Value);
+            if (empleado != null)
+            {
+                oEmpleadoVM.oEmpleado = empleado;
+            }
+        }
+        else
+        {
+            // Creating a new employee
+            oEmpleadoVM.oEmpleado = new Empleado();
+        }
+
+        oEmpleadoVM.oListaCargo = _DBContext.Cargos.Select(cargo => new SelectListItem()
+        {
+            Text = cargo.Descripcion,
+            Value = cargo.IdCargo.ToString()
+        }).ToList();
 
         return View(oEmpleadoVM);
     }
@@ -44,13 +56,42 @@ public class HomeController : Controller
     {
         if (oEmpleadoVM.oEmpleado.IdEmpleado == 0)
         {
+            // Create a new employee
             _DBContext.Empleados.Add(oEmpleadoVM.oEmpleado);
+        }
+        else
+        {
+            // Update existing employee
+            var empleadoExistente = _DBContext.Empleados.Find(oEmpleadoVM.oEmpleado.IdEmpleado);
+            if (empleadoExistente != null)
+            {
+                empleadoExistente.NombreCompleto = oEmpleadoVM.oEmpleado.NombreCompleto;
+                empleadoExistente.Correo = oEmpleadoVM.oEmpleado.Correo;
+                empleadoExistente.Telefono = oEmpleadoVM.oEmpleado.Telefono;
+                empleadoExistente.IdCargo = oEmpleadoVM.oEmpleado.IdCargo;
+
+                _DBContext.Empleados.Update(empleadoExistente);
+            }
         }
 
         _DBContext.SaveChanges();
 
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Index");
     }
+
+    [HttpPost]
+    public IActionResult Eliminar(int idEmpleado)
+    {
+        var empleado = _DBContext.Empleados.Find(idEmpleado);
+        if (empleado != null)
+        {
+            _DBContext.Empleados.Remove(empleado);
+            _DBContext.SaveChanges();
+        }
+
+        return RedirectToAction("Index");
+    }
+
     public IActionResult Privacy()
     {
         return View();
